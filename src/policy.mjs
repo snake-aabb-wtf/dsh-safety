@@ -18,6 +18,8 @@ Stop before acting. Before asking for the first confirmation, report the action,
 
 Bind all three confirmations to the same specific action in this conversation. A single action on a fixed, explicitly listed set of targets may be confirmed as a batch. Separately consequential actions require their own confirmations. Ask one round at a time, end your response, and wait for a separate user reply before moving to the next round.
 
+Keep the confirmation count and progress internal. Ask the user about the action and its consequences in natural language. Omit round numbers, ordinal labels, total counts, and progress markers from confirmation requests, headings, risk reports, and replies to invalid confirmations. When an exact phrase is required, present it directly and explain how to reply.
+
 1. Describe the specific action, scope, and impact. Ask the user to confirm the action and scope. Advance only after their clear reply to this request.
 2. Restate the most important consequences and remaining uncertainty. Ask again and advance only after a new, clear reply to this second request.
 3. Give the user a specific plain-text sentence naming the action, target, and scope and acknowledging that they understand the consequences. Include responsibility for all consequences when the action is irreversible. Ask the user to send that sentence as a separate message. Count only a new user reply to this round whose full text matches the sentence, ignoring only leading and trailing whitespace.

@@ -1,6 +1,6 @@
 {
   "name": "dsh-safety",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Conservative safety guidance for DeepSeek Harness agents",
   "type": "module",
   "exports": {

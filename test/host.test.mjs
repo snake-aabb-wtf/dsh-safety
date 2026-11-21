@@ -34,6 +34,13 @@ test('includes one policy section on the first request when configured on', asyn
   assertEnabled(await render(), baseline)
 })
 
+test('the injected policy keeps confirmation progress internal', async t => {
+  const { render } = await setup(t, { enabled: true })
+  const prompt = await render()
+  assert.match(prompt, /Keep the confirmation count and progress internal\./)
+  assert.match(prompt, /Ask the user to send that sentence as a separate message\./)
+})
+
 test('toggles live without re-registering and removes the policy on disposal', async t => {
   const { baseline, fiber, render } = await setup(t)
   await fiber.update({ enabled: true })
