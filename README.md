@@ -1,22 +1,28 @@
 # dsh-safety
 
-`dsh-safety` 为 DeepSeek Harness 增加「安全模式」。开启后，Harness 在系统提示词中加入策略，要求 Agent 披露有依据的低概率风险和剩余不确定性，对敏感操作逐轮请求三次确认，并在不可逆操作前先给出风险报告。
+`dsh-safety` 为 DeepSeek Harness 增加「安全模式」。开启后，Harness 在系统提示词中加入策略，要求 Agent 保护凭据、拒绝削弱开发项目和公网 Web 的安全防护，并对允许执行的敏感操作逐轮确认。Agent 会披露有依据的低概率风险和剩余不确定性，在不可逆操作前先给出风险报告。
 
 ## 安装和启用
 
 首版面向 **DeepSeek Harness `0.2.2-rc.5`** 的标准 Desktop 和 Web 配置。
 
-1. 在工作区运行 `npm pack`，生成 `dsh-safety-0.1.2.tgz`。
+1. 在工作区运行 `npm pack`，生成 `dsh-safety-0.2.0.tgz`。
 2. 在 Desktop 或 Web 的侧栏打开「插件 → 添加插件」，输入 tarball 的绝对路径，安装后启用 bundle。
 3. 打开全局「设置 → 安全模式」，打开「启用安全模式」。该开关默认关闭，设置保存在当前 Host profile。
 
 Web 用户也可用 CLI 向已有的 Web profile 安装本地包：
 
 ```powershell
-dsh plugin --profile web add (Resolve-Path './dsh-safety-0.1.2.tgz').Path
+dsh plugin --profile web add (Resolve-Path './dsh-safety-0.2.0.tgz').Path
 ```
 
 开关从下一次系统提示词组装起生效。在途请求继续使用发出时的提示词。已有会话保留历史对话，支持历史系统提示词更新的 Flash 路由以最新的完整系统消息为准。关闭开关后可以从同一个设置页重新启用。
+
+## 凭据和安全防护
+
+已经贴进聊天的凭据可能进入消息记录和模型上下文。Agent 会拒绝使用该值，建议你去签发处撤销或轮换，并由你把新值手动写入受保护的文件。文件可以是 `.txt` 或应用支持的其他格式，文件名和路径由你选择。限制文件访问权限，并避免把它放进共享目录或版本控制。Agent 可以用路径或占位符编写接入代码，由应用在运行时读取文件。
+
+Agent 会拒绝移除、绕过或削弱开发项目及公网 Web 的有效安全措施。能验证覆盖范围和切换期间的防护时，可以继续等效替换。用户确认无法解除这些拒绝。
 
 ## 确认如何工作
 
