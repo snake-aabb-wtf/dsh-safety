@@ -6,14 +6,14 @@
 
 首版面向 **DeepSeek Harness `0.2.2-rc.5`** 的标准 Desktop 和 Web 配置。
 
-1. 在工作区运行 `npm pack`，生成 `dsh-safety-0.1.0.tgz`。
+1. 在工作区运行 `npm pack`，生成 `dsh-safety-0.1.1.tgz`。
 2. 在 Desktop 或 Web 的侧栏打开「插件 → 添加插件」，输入 tarball 的绝对路径，安装后启用 bundle。
 3. 打开全局「设置 → 安全模式」，打开「启用安全模式」。该开关默认关闭，设置保存在当前 Host profile。
 
 Web 用户也可用 CLI 向已有的 Web profile 安装本地包：
 
 ```powershell
-dsh plugin --profile web add (Resolve-Path './dsh-safety-0.1.0.tgz').Path
+dsh plugin --profile web add (Resolve-Path './dsh-safety-0.1.1.tgz').Path
 ```
 
 开关从下一次系统提示词组装起生效。在途请求继续使用发出时的提示词。已有会话保留历史对话，支持历史系统提示词更新的 Flash 路由以最新的完整系统消息为准。关闭开关后可以从同一个设置页重新启用。

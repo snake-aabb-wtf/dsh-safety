@@ -8,6 +8,7 @@ const ready = { status: 'ready', value: { enabled: false }, writable: true }
 
 function setup() {
   const Switch = Symbol('native Switch')
+  const Shield = Symbol('native shield')
   const states = []
   const writes = []
   let nextHook = 0
@@ -16,6 +17,7 @@ function setup() {
   let snapshot = ready
   let settingsError = null
   let section
+  let sectionIcon
   let renderSection
   const form = {
     snapshot: () => snapshot,
@@ -38,15 +40,28 @@ function setup() {
       },
       useSyncExternalStore: (_, getSnapshot) => getSnapshot(),
     },
-    '@deepseek-ai/dsh-client-ui-primitives': { Switch },
+    '@deepseek-ai/dsh-client-ui-primitives': { Switch, IconShieldOutlineMedium: Shield },
   }
   const translate = key => dictionaries[language][key]
   const ctx = {
     effect: register => register(),
     locale: { register(_, values) { dictionaries = values }, bind: () => translate },
     slots: {
-      inject(slot, callback) { assert.equal(slot, 'settings.section'); return callback() },
-      register(entry, component) { assert.equal(section, undefined); section = entry; renderSection = component },
+      inject(slot, callback) {
+        assert.ok(['settings.section', 'settings.section.icon'].includes(slot))
+        return callback()
+      },
+      register(entry, component) {
+        if (entry.name === 'settings.section.icon') {
+          assert.equal(entry.id, 'dsh-safety')
+          assert.equal(sectionIcon, undefined)
+          sectionIcon = component({ size: 16 })
+          return
+        }
+        assert.equal(section, undefined)
+        section = entry
+        renderSection = component
+      },
     },
     configForms: {
       get(id) { assert.equal(id, 'dsh-safety'); return form },
@@ -70,14 +85,18 @@ function setup() {
       if (predicate(node)) return node
       return node.children.map(child => find(child, predicate)).find(Boolean)
     }
+    const text = node => typeof node === 'string' ? node : node?.children?.map(text).join(' ') ?? ''
     return {
       toggle: find(tree, node => node.type === Switch)?.props,
       alert: find(tree, node => node.props?.role === 'alert')?.children.join(''),
       status: find(tree, node => node.props?.role === 'status')?.children.join(''),
+      heading: find(tree, node => node.type === 'h2')?.children.join(''),
+      rules: find(tree, node => node.type === 'dl'),
+      text: text(tree),
     }
   }
   return {
-    section, render, writes,
+    section, sectionIcon, Shield, render, writes,
     setSnapshot: next => { snapshot = next },
     setLanguage: next => { language = next },
     setSettingsError: next => { settingsError = next },
@@ -91,6 +110,24 @@ test('registers one localized safety section in global settings', () => {
   assert.equal(page.section.label(), '安全模式')
   page.setLanguage('en')
   assert.equal(page.section.label(), 'Safety Mode')
+})
+
+test('uses the native shield and explains the three features in both languages', () => {
+  const page = setup()
+  assert.equal(page.sectionIcon?.type, page.Shield)
+  assert.equal(page.sectionIcon.props.size, 16)
+  for (const [locale, heading, labels] of [
+    ['zh', '安全模式', ['三次确认', '风险提示', '不可逆操作']],
+    ['en', 'Safety Mode', ['Three confirmations', 'Risk review', 'Irreversible actions']],
+  ]) {
+    page.setLanguage(locale)
+    const view = page.render()
+    assert.equal(view.heading, heading)
+    assert.deepEqual(Array.from(view.rules.children, row => row.children[0].children.join('')), labels)
+    assert.doesNotMatch(view.text, /遵守程度|depends on the model/i)
+    assert.equal(view.status, undefined)
+    assert.equal(view.alert, undefined)
+  }
 })
 
 test('disables a switch whose value is unknown or whose form is read-only', () => {
