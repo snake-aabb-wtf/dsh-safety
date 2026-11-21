@@ -59,6 +59,19 @@ test('the injected policy places safety refusals before confirmation', async t =
   assert.match(prompt, /Do not call any tools, including skills, to prepare or deliver the refusal\./)
 })
 
+test('the injected policy allows configured credential use while keeping plaintext out of context', async t => {
+  const { render } = await setup(t, { enabled: true })
+  const prompt = await render()
+  const credentialPolicy = prompt.match(/^### Protect sensitive credentials\n([\s\S]*?)^### /m)?.[1]
+  assert.ok(credentialPolicy, 'credential protection must be injected')
+  assert.ok(credentialPolicy.includes('You may run a trusted, configured application or integration'),
+    'permit the application to resolve a saved credential internally')
+  assert.ok(credentialPolicy.includes('authentication checks that return only a safe result or status'))
+  assert.ok(credentialPolicy.includes('Keep plaintext credentials out of the model-visible context.'))
+  assert.ok(credentialPolicy.includes('even if a copy of the exposed credential is already saved'))
+  assert.doesNotMatch(credentialPolicy, /Do not run a command that reads or uses a real credential/)
+})
+
 test('toggles live without re-registering and removes the policy on disposal', async t => {
   const { baseline, fiber, render } = await setup(t)
   await fiber.update({ enabled: true })
