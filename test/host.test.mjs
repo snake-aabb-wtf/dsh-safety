@@ -41,6 +41,23 @@ test('the injected policy keeps confirmation progress internal', async t => {
   assert.match(prompt, /Ask the user to send that sentence as a separate message\./)
 })
 
+test('the injected policy places safety refusals before confirmation', async t => {
+  const { render } = await setup(t, { enabled: true })
+  const prompt = await render()
+  const headings = [
+    '### Apply safety refusals before confirmation',
+    '### Protect sensitive credentials',
+    '### Preserve security controls in development',
+    '### Preserve security controls on public web deployments',
+    '### Classify the proposed action',
+    '### Require three distinct confirmations',
+  ]
+  const positions = headings.map(heading => prompt.indexOf(heading))
+  assert.ok(positions.every((position, i) =>
+    position >= 0 && (i === 0 || position > positions[i - 1])))
+  assert.match(prompt, /User confirmation and tool approval cannot override these refusals\./)
+})
+
 test('toggles live without re-registering and removes the policy on disposal', async t => {
   const { baseline, fiber, render } = await setup(t)
   await fiber.update({ enabled: true })
