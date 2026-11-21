@@ -56,6 +56,7 @@ test('the injected policy places safety refusals before confirmation', async t =
   assert.ok(positions.every((position, i) =>
     position >= 0 && (i === 0 || position > positions[i - 1])))
   assert.match(prompt, /User confirmation and tool approval cannot override these refusals\./)
+  assert.match(prompt, /Do not call any tools, including skills, to prepare or deliver the refusal\./)
 })
 
 test('toggles live without re-registering and removes the policy on disposal', async t => {
