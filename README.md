@@ -1,52 +1,65 @@
-# dsh-safety
+<h1 align="center">dsh-safety</h1>
 
-`dsh-safety` 为 DeepSeek Harness 增加「安全模式」。开启后，Harness 在系统提示词中加入策略，要求 Agent 保护凭据、拒绝削弱开发项目和公网 Web 的安全防护，并对允许执行的敏感操作逐轮确认。Agent 会披露有依据的低概率风险和剩余不确定性，在不可逆操作前先给出风险报告。
+<p align="center">DeepSeek Harness 的安全模式插件</p>
 
-## 安装和启用
+<p align="center">
+  <a href="https://github.com/snake-aabb-wtf/dsh-safety/releases/latest"><strong>下载安装包</strong></a>
+  · <a href="#安装">安装说明</a>
+  · <a href="#功能一览">功能一览</a>
+  · <a href="docs/verification.md">验证记录</a>
+</p>
 
-首版面向 **DeepSeek Harness `0.2.2-rc.5`** 的标准 Desktop 和 Web 配置。
+## 功能一览
 
-1. 从 [GitHub Releases](https://github.com/snake-aabb-wtf/dsh-safety/releases) 下载 `dsh-safety-0.2.1.tgz`，或在工作区运行 `npm pack` 生成它。
-2. 在 Desktop 或 Web 的侧栏打开「插件 → 添加插件」，输入 tarball 的绝对路径，安装后启用 bundle。
-3. 打开全局「设置 → 安全模式」，打开「启用安全模式」。该开关默认关闭，设置保存在当前 Host profile。
+| 功能 | 安全模式下的行为 |
+| --- | --- |
+| **风险提示** | 提醒有依据的低概率风险，说明哪些信息仍待核实。不可逆操作前说明影响、范围和恢复选项。 |
+| **三次确认** | 用自然语言逐次询问，等待三条独立回复。最后一次按 Agent 给出的完整句子原样确认。 |
+| **凭据保护** | PowerShell 或其他可信工具在同一次调用内使用已保存的 Key，只返回业务结果或认证状态。 |
+| **安全防护** | 拒绝削弱开发项目或公网 Web 的有效防护。验证覆盖范围和切换期间的防护后，可以进行等效替换。 |
+| **跨轮判断** | 根据同一会话中相关步骤的累计后果判断风险。独立任务按各自的影响处理。 |
 
-Web 用户也可用 CLI 向已有的 Web profile 安装本地包：
+## 安装
+
+适用于 **DeepSeek Harness `0.2.2-rc.5`** 的标准 Desktop 和 Web 配置。
+
+1. 从 [GitHub Releases](https://github.com/snake-aabb-wtf/dsh-safety/releases/latest) 下载 `.tgz` 安装包。
+2. 打开 **插件 → 添加插件**，填入 Harness 可访问的安装包绝对路径。安装后选择 **立即启用**。
+3. 在 **设置 → 安全模式** 打开 **启用安全模式**。
+
+开关默认关闭，保存在当前 Host profile。调整后从下一次系统提示词组装起生效。
+
+<details>
+<summary>通过 Web CLI 安装</summary>
+
+在安装包所在目录运行，然后按上面的步骤启用插件和安全模式。
 
 ```powershell
 dsh plugin --profile web add (Resolve-Path './dsh-safety-0.2.1.tgz').Path
 ```
 
-开关从下一次系统提示词组装起生效。在途请求继续使用发出时的提示词。已有会话保留历史对话，支持历史系统提示词更新的 Flash 路由以最新的完整系统消息为准。关闭开关后可以从同一个设置页重新启用。
+</details>
 
-## 凭据和安全防护
+## 配置凭据
 
-需要凭据时，Agent 会请你在聊天之外将它手动写入受保护的文件，只告知路径、凭据引用或配置完成状态。对于已授权的操作，Agent 会用 PowerShell 或其他可信工具在同一次调用内读取凭据并向对应服务认证。工具只返回业务结果或认证状态，明文凭据留在工具执行内部，避开聊天、工具参数、输出、日志和错误信息。
+1. 将 Key 手动写入你选择的受保护文件，可以使用 `.txt` 或应用支持的其他格式。把文件放在访问受限的位置，并排除在版本控制之外。
+2. 只向 Agent 提供文件路径或凭据引用。Key 由工具在执行时读取并向对应服务认证。
 
-已经贴进聊天的凭据可能进入消息记录和模型上下文。即使同一个值也保存在文件里，Agent 仍会拒绝使用，并建议你到签发处撤销或轮换。新值由你手动写入受保护的文件。文件可以是 `.txt` 或应用支持的其他格式，文件名和路径由你选择。限制文件访问权限，并避免把它放进共享目录或版本控制。
+如果误把 Key 发进聊天，Agent 会引导你在签发处撤销或轮换，再更新本地文件。
 
-Agent 会拒绝移除、绕过或削弱开发项目及公网 Web 的有效安全措施。它会结合同一会话里相关操作的累计后果判断，即使每一步单看像常规操作。能验证覆盖范围和切换期间的防护时，可以继续等效替换。用户确认无法解除这些拒绝。
+## 开发与发布
 
-## 确认如何工作
-
-Agent 根据会话记录跟踪三次确认，用自然语言逐次询问。需要输入指定措辞时，Agent 会给出针对本次操作的完整句子。不可逆操作还要求用户确认理解并愿意承担该操作的全部后果。目标、范围或预期后果发生实质变化时，需要重新确认。
-
-安全模式通过提示词指导模型，执行效果取决于模型遵守程度。Harness 的权限、审批和沙箱独立生效。首版用于标准提示词组装和使用同一提示词服务的进程内子 Agent。
-
-## 开发与验证
+使用 **Node.js `>=24.9.0`** 安装依赖、运行检查并构建本地 `.tgz`。
 
 ```powershell
 npm ci
 npm run check
 npm test
-npm pack --dry-run
+npm pack
 ```
 
-测试需要 Node `>=24.9.0`。实际验收及运行环境见 [验证记录](docs/verification.md)。
-
-## 发布
-
-推送与 `package.json` 和 `package-lock.json` 中版本一致的 Git 标签，例如 `v0.2.1`。GitHub Actions 会运行语法检查和测试，打包 `.tgz` 并附加到该标签的 GitHub Release。预发布标签会发布为 GitHub 预发行版。
+推送与 `package.json` 和 `package-lock.json` 一致的版本标签，例如 `v0.2.1`，即可启动 [Release 工作流](.github/workflows/release.yml)。通过检查和测试后，工作流将 `.tgz` 附到对应的 GitHub Release，并为预发布版本标记预发行版。
 
 ## 许可证
 
-本项目采用 [MIT 许可证](LICENSE)。
+[MIT](LICENSE)
