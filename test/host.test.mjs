@@ -46,6 +46,7 @@ test('the injected policy places safety refusals before confirmation', async t =
   const prompt = await render()
   const headings = [
     '### Apply safety refusals before confirmation',
+    '### Assess cumulative effects across turns',
     '### Protect sensitive credentials',
     '### Preserve security controls in development',
     '### Preserve security controls on public web deployments',
@@ -57,6 +58,14 @@ test('the injected policy places safety refusals before confirmation', async t =
     position >= 0 && (i === 0 || position > positions[i - 1])))
   assert.match(prompt, /User confirmation and tool approval cannot override these refusals\./)
   assert.match(prompt, /Do not call any tools, including skills, to prepare or deliver the refusal\./)
+})
+
+test('the injected policy assesses related steps by their cumulative effect', async t => {
+  const { render } = await setup(t, { enabled: true })
+  const prompt = await render()
+  assert.match(prompt, /Consider earlier related requests, decisions, and actions/)
+  assert.match(prompt, /Refuse any step that would contribute to a prohibited cumulative outcome\./)
+  assert.match(prompt, /Do not group unrelated tasks merely because they share a conversation\./)
 })
 
 test('the injected policy allows configured credential use while keeping plaintext out of context', async t => {
