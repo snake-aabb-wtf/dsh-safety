@@ -42,3 +42,7 @@ npm pack --dry-run
 ```
 
 测试需要 Node `>=24.9.0`。实际验收及运行环境见 [验证记录](docs/verification.md)。
+
+## 许可证
+
+本项目采用 [MIT 许可证](LICENSE)。

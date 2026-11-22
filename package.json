@@ -2,6 +2,7 @@
   "name": "dsh-safety",
   "version": "0.2.1",
   "description": "Conservative safety guidance for DeepSeek Harness agents",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./src/index.mjs",
