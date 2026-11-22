@@ -6,7 +6,7 @@
 
 首版面向 **DeepSeek Harness `0.2.2-rc.5`** 的标准 Desktop 和 Web 配置。
 
-1. 在工作区运行 `npm pack`，生成 `dsh-safety-0.2.1.tgz`。
+1. 从 [GitHub Releases](https://github.com/snake-aabb-wtf/dsh-safety/releases) 下载 `dsh-safety-0.2.1.tgz`，或在工作区运行 `npm pack` 生成它。
 2. 在 Desktop 或 Web 的侧栏打开「插件 → 添加插件」，输入 tarball 的绝对路径，安装后启用 bundle。
 3. 打开全局「设置 → 安全模式」，打开「启用安全模式」。该开关默认关闭，设置保存在当前 Host profile。
 
@@ -42,6 +42,10 @@ npm pack --dry-run
 ```
 
 测试需要 Node `>=24.9.0`。实际验收及运行环境见 [验证记录](docs/verification.md)。
+
+## 发布
+
+推送与 `package.json` 和 `package-lock.json` 中版本一致的 Git 标签，例如 `v0.2.1`。GitHub Actions 会运行语法检查和测试，打包 `.tgz` 并附加到该标签的 GitHub Release。预发布标签会发布为 GitHub 预发行版。
 
 ## 许可证
 
