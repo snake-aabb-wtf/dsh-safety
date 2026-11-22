@@ -2,19 +2,35 @@ window.__ModuleLoader__.load({
   id: 'dsh-safety',
   factory(require) {
     const { createElement: element, useRef, useState, useSyncExternalStore } = require('react')
-    const { IconShieldOutlineMedium, Switch } = require('@deepseek-ai/dsh-client-ui-primitives')
+    const {
+      IconChecklistOutlineRegular, IconClockOutlineRegular, IconRefreshOutlineRegular,
+      IconShieldOutlineMedium, IconShieldOutlineRegular, IconWarningTriangleOutlineRegular, Switch,
+    } = require('@deepseek-ai/dsh-client-ui-primitives')
     const id = 'dsh-safety'
-    const features = ['confirmations', 'risks', 'irreversible']
+    const features = [
+      ['confirmations', IconChecklistOutlineRegular],
+      ['risks', IconWarningTriangleOutlineRegular],
+      ['irreversible', IconClockOutlineRegular],
+      ['credentials', IconShieldOutlineRegular],
+      ['guardrails', IconRefreshOutlineRegular],
+    ]
     const dictionaries = {
       zh: {
         nav: '安全模式',
         toggle: '启用安全模式',
+        on: '已开启',
+        off: '已关闭',
+        rules: '启用后的规则',
         confirmations: '三次确认',
         confirmationsDetail: '敏感操作分三轮确认，最后一轮需输入指定措辞。',
         risks: '风险提示',
         risksDetail: '说明可能的风险和仍待核实的信息。',
         irreversible: '不可逆操作',
         irreversibleDetail: '先说明影响和恢复选项，再请求确认。',
+        credentials: '凭据保护',
+        credentialsDetail: '提示轮换已暴露的凭据。通过受信工具使用预先保存的凭据，避免将明文带入聊天。',
+        guardrails: '安全措施与跨轮判断',
+        guardrailsDetail: '保留代码和公网服务中的有效防护，结合先前请求判断操作的累计影响。',
         loading: '正在读取设置…',
         readFailed: '读取失败。重新连接后自动刷新。',
         unavailable: '无法读取此设置。',
@@ -26,12 +42,19 @@ window.__ModuleLoader__.load({
       en: {
         nav: 'Safety Mode',
         toggle: 'Enable Safety Mode',
+        on: 'On',
+        off: 'Off',
+        rules: 'Rules when enabled',
         confirmations: 'Three confirmations',
         confirmationsDetail: 'Confirm sensitive actions in three rounds. Enter the requested phrase in the final round.',
         risks: 'Risk review',
         risksDetail: 'See possible risks and what still needs checking.',
         irreversible: 'Irreversible actions',
         irreversibleDetail: 'Review the impact and recovery options before confirming.',
+        credentials: 'Credential protection',
+        credentialsDetail: 'Get rotation guidance for exposed credentials. Use saved credentials through trusted tools to keep secrets out of chat.',
+        guardrails: 'Safeguards across turns',
+        guardrailsDetail: 'Keep safeguards in code and public services, and consider the combined effect of related requests.',
         loading: 'Loading setting…',
         readFailed: 'Could not load the setting. It will refresh after reconnecting.',
         unavailable: 'This setting is unavailable.',
@@ -41,45 +64,201 @@ window.__ModuleLoader__.load({
         disconnected: 'Connection lost. Check the setting after reconnecting.',
       },
     }
-    const styles = {
-      page: { display: 'flex', flexDirection: 'column', gap: '16px', paddingBlock: '8px', color: 'var(--dsw-alias-label-primary)' },
-      heading: { margin: 0, fontSize: '16px', fontWeight: 500, lineHeight: '24px' },
-      card: {
-        border: '0.5px solid var(--dsw-alias-settings-card-stroke)',
-        borderRadius: 'var(--dsw-radius-xl)',
-        background: 'var(--dsw-alias-settings-card-fill)',
-      },
-      control: {
-        display: 'grid',
-        gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '14px 16px',
-      },
-      icon: {
-        display: 'grid',
-        placeItems: 'center',
-        width: '32px',
-        height: '32px',
-        borderRadius: 'var(--dsw-radius-md)',
-        background: 'var(--dsw-alias-bg-module-platform)',
-        color: 'var(--dsw-alias-label-secondary)',
-      },
-      toggle: { fontSize: '14px', fontWeight: 500, lineHeight: '20px' },
-      status: { margin: '2px 0 0', fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary)' },
-      error: { margin: '2px 0 0', fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-state-error-primary)' },
-      details: { margin: 0 },
-      detailRow: {
-        display: 'flex',
-        flexWrap: 'wrap',
-        columnGap: '16px',
-        rowGap: '2px',
-        padding: '12px 16px',
-        borderTop: '0.5px solid var(--dsw-alias-border-l2)',
-      },
-      term: { flex: '0 1 124px', minWidth: 0, fontSize: '13px', lineHeight: '20px' },
-      detail: { flex: '1 1 210px', minWidth: 0, margin: 0, fontSize: '12px', lineHeight: '20px', color: 'var(--dsw-alias-label-secondary)' },
-    }
+    const stylesheet = `
+      .dsh-safety-page {
+        --safety-red: #ae2c43;
+        --safety-green: #087749;
+        --safety-red-track: #b9344d;
+        --safety-green-track: #168251;
+        --safety-thumb: #fff;
+        --safety-accent: var(--dsw-alias-label-secondary);
+        --safety-surface: var(--dsw-alias-settings-card-fill);
+        --safety-border: var(--dsw-alias-settings-card-stroke);
+        --safety-ease: cubic-bezier(.22, 1, .36, 1);
+        display: grid;
+        gap: 20px;
+        padding-block: 8px;
+        color: var(--dsw-alias-label-primary);
+      }
+      body[data-ds-dark-theme] .dsh-safety-page {
+        --safety-red: #ff899b;
+        --safety-green: #61dfa9;
+        --safety-red-track: #ee7288;
+        --safety-green-track: #43b585;
+        --safety-thumb: #0f1115;
+      }
+      .dsh-safety-page[data-mode='off'] {
+        --safety-accent: var(--safety-red);
+        --safety-track: var(--safety-red-track);
+      }
+      .dsh-safety-page[data-mode='on'] {
+        --safety-accent: var(--safety-green);
+        --safety-track: var(--safety-green-track);
+      }
+      .dsh-safety-hero {
+        position: relative;
+        isolation: isolate;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: clamp(12px, 3vw, 24px);
+        min-height: 146px;
+        padding: 18px clamp(12px, 3vw, 28px);
+        border: 1px solid color-mix(in srgb, var(--safety-accent) 28%, var(--safety-border));
+        border-radius: var(--dsw-radius-xl);
+        background-color: var(--safety-surface);
+        box-shadow: inset 0 1px color-mix(in srgb, var(--safety-accent) 10%, transparent);
+        transition: border-color 320ms ease, box-shadow 320ms ease;
+      }
+      .dsh-safety-hero::before {
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        border-radius: inherit;
+        background-color: color-mix(in srgb, var(--safety-accent) 7%, transparent);
+        background-image: radial-gradient(ellipse at 7% 38%, currentColor, transparent 66%);
+        color: color-mix(in srgb, var(--safety-accent) 14%, transparent);
+        content: '';
+        pointer-events: none;
+        transition: background-color 360ms ease, color 360ms ease;
+      }
+      .dsh-safety-orb {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: clamp(62px, 10vw, 106px);
+        aspect-ratio: 1;
+        color: var(--safety-accent);
+        transition: color 360ms ease;
+      }
+      .dsh-safety-orb::before, .dsh-safety-orb::after, .dsh-safety-wave {
+        position: absolute;
+        border: 1px solid currentColor;
+        border-radius: 50%;
+        content: '';
+        pointer-events: none;
+      }
+      .dsh-safety-orb::before {
+        inset: 0;
+        opacity: .26;
+      }
+      .dsh-safety-orb::after {
+        inset: 12%;
+        border-style: dashed;
+        opacity: .35;
+      }
+      .dsh-safety-shield {
+        position: absolute;
+        inset: 24%;
+        display: grid;
+        place-items: center;
+        border: 1px solid color-mix(in srgb, currentColor 38%, transparent);
+        border-radius: 50%;
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        box-shadow: 0 0 23px color-mix(in srgb, currentColor 19%, transparent);
+      }
+      .dsh-safety-shield svg {
+        width: 55%;
+        height: 55%;
+      }
+      .dsh-safety-wave {
+        inset: 7%;
+        opacity: 0;
+        animation: dsh-safety-wave 720ms var(--safety-ease);
+      }
+      @keyframes dsh-safety-wave {
+        from { transform: scale(.6); opacity: .72; }
+        to { transform: scale(1.22); opacity: 0; }
+      }
+      .dsh-safety-heading, .dsh-safety-rules-heading {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 20px;
+      }
+      .dsh-safety-mode {
+        margin: 4px 0 0;
+        color: var(--safety-accent);
+        font-size: 30px;
+        font-weight: 600;
+        line-height: 1.2;
+        transition: color 360ms ease;
+      }
+      .dsh-safety-message {
+        margin: 4px 0 0;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+        line-height: 18px;
+        overflow-wrap: anywhere;
+      }
+      .dsh-safety-message[role='alert'] {
+        color: var(--safety-red);
+      }
+      .dsh-safety-page .dsh-safety-switch[role='switch'][aria-checked] {
+        background-color: var(--safety-track, var(--dsw-alias-bg-module-platform));
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--safety-accent) 13%, transparent);
+        transition: background-color 320ms ease, box-shadow 320ms ease;
+      }
+      .dsh-safety-page .dsh-safety-switch[role='switch']:focus-visible {
+        outline-offset: 5px;
+      }
+      .dsh-safety-page:is([data-mode='on'], [data-mode='off']) .dsh-safety-switch[role='switch'] > span {
+        background-color: var(--safety-thumb);
+      }
+      .dsh-safety-rules-heading {
+        margin-bottom: 8px;
+      }
+      .dsh-safety-rules {
+        margin: 0;
+        border: .5px solid var(--safety-border);
+        border-radius: var(--dsw-radius-xl);
+        background-color: var(--safety-surface);
+      }
+      .dsh-safety-rule {
+        position: relative;
+        display: grid;
+        gap: 2px;
+        padding-block: 11px;
+        padding-inline: 58px 16px;
+      }
+      .dsh-safety-rule + .dsh-safety-rule {
+        border-top: .5px solid var(--dsw-alias-border-l2);
+      }
+      .dsh-safety-rule-icon {
+        position: absolute;
+        inset-inline-start: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: var(--dsw-radius-md);
+        background-color: color-mix(in srgb, var(--safety-accent) 9%, transparent);
+        color: var(--safety-accent);
+        transition: background-color 320ms ease, color 320ms ease;
+      }
+      .dsh-safety-rule dt {
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 18px;
+      }
+      .dsh-safety-rule dd {
+        margin: 0;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+        line-height: 18px;
+        overflow-wrap: anywhere;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .dsh-safety-page *, .dsh-safety-page *::before, .dsh-safety-page *::after,
+        .dsh-safety-page .dsh-safety-switch[role='switch'][aria-checked],
+        .dsh-safety-page .dsh-safety-switch[role='switch'] > span {
+          animation: none;
+          transition: none;
+        }
+      }
+    `
 
     function SafetySettings({ t, form, settings }) {
       const { status, value, writable } = useSyncExternalStore(form.subscribe, form.getSnapshot)
@@ -88,7 +267,10 @@ window.__ModuleLoader__.load({
       const [error, setError] = useState(null)
       const saving = useRef(false)
       const ready = status === 'ready' && typeof value?.enabled === 'boolean'
-      const editable = ready && writable && !readFailed
+      const known = ready && !readFailed
+      const checked = value?.enabled === true
+      const mode = known ? (checked ? 'on' : 'off') : 'unknown'
+      const editable = known && writable
 
       async function save(next) {
         if (!editable || saving.current) return
@@ -112,27 +294,30 @@ window.__ModuleLoader__.load({
         : busy ? 'saving' : null
 
       const headingId = `${id}-heading`
-      return element('section', { 'aria-labelledby': headingId, style: styles.page },
-        element('h2', { id: headingId, style: styles.heading }, t('nav')),
-        element('div', { style: styles.card },
-          element('div', { style: styles.control },
-            element('span', { 'aria-hidden': true, style: styles.icon }, element(IconShieldOutlineMedium, { size: 18 })),
-            element('div', null,
-              element('div', { style: styles.toggle }, t('toggle')),
-              statusKey && element('p', { role: 'status', style: styles.status }, t(statusKey)),
-              error && element('p', { role: 'alert', style: styles.error }, t(error)),
-            ),
-            element(Switch, {
-              checked: value?.enabled === true,
-              disabled: !editable || busy,
-              label: t('toggle'),
-              onChange: save,
-            }),
+      return element('section', { 'aria-labelledby': headingId, className: 'dsh-safety-page', 'data-mode': mode },
+        element('style', null, stylesheet),
+        element('div', { className: 'dsh-safety-hero' },
+          element('div', { 'aria-hidden': true, className: 'dsh-safety-orb' },
+            element('span', { className: 'dsh-safety-shield' }, element(IconShieldOutlineMedium, { size: 30 })),
+            known && element('span', { key: mode, className: 'dsh-safety-wave' }),
           ),
-          element('dl', { style: styles.details }, ...features.map(feature =>
-            element('div', { key: feature, style: styles.detailRow },
-              element('dt', { style: styles.term }, t(feature)),
-              element('dd', { style: styles.detail }, t(`${feature}Detail`)),
+          element('div', null,
+            element('h2', { id: headingId, className: 'dsh-safety-heading' }, t('nav')),
+            known && element('p', { id: `${id}-mode`, className: 'dsh-safety-mode' }, t(mode)),
+            statusKey && element('p', { role: 'status', className: 'dsh-safety-message' }, t(statusKey)),
+            error && element('p', { role: 'alert', className: 'dsh-safety-message' }, t(error)),
+          ),
+          element(Switch, { className: 'dsh-safety-switch', checked, disabled: !editable || busy, label: t('toggle'), onChange: save }),
+        ),
+        element('div', null,
+          element('h3', { className: 'dsh-safety-rules-heading' }, t('rules')),
+          element('dl', { className: 'dsh-safety-rules' }, ...features.map(([feature, Icon]) =>
+            element('div', { key: feature, className: 'dsh-safety-rule' },
+              element('dt', null,
+                element('span', { 'aria-hidden': true, className: 'dsh-safety-rule-icon' }, element(Icon, { size: 16 })),
+                t(feature),
+              ),
+              element('dd', null, t(`${feature}Detail`)),
             ),
           )),
         ),

@@ -8,7 +8,11 @@ const ready = { status: 'ready', value: { enabled: false }, writable: true }
 
 function setup() {
   const Switch = Symbol('native Switch')
-  const Shield = Symbol('native shield')
+  const icons = Object.fromEntries([
+    'IconChecklistOutlineRegular', 'IconClockOutlineRegular', 'IconRefreshOutlineRegular',
+    'IconShieldOutlineMedium', 'IconShieldOutlineRegular', 'IconWarningTriangleOutlineRegular',
+  ].map(name => [name, Symbol(name)]))
+  const Shield = icons.IconShieldOutlineMedium
   const states = []
   const writes = []
   let nextHook = 0
@@ -40,7 +44,7 @@ function setup() {
       },
       useSyncExternalStore: (_, getSnapshot) => getSnapshot(),
     },
-    '@deepseek-ai/dsh-client-ui-primitives': { Switch, IconShieldOutlineMedium: Shield },
+    '@deepseek-ai/dsh-client-ui-primitives': { Switch, ...icons },
   }
   const translate = key => dictionaries[language][key]
   const ctx = {
@@ -85,13 +89,15 @@ function setup() {
       if (predicate(node)) return node
       return node.children.map(child => find(child, predicate)).find(Boolean)
     }
-    const text = node => typeof node === 'string' ? node : node?.children?.map(text).join(' ') ?? ''
+    const text = node => typeof node === 'string' ? node : node?.type === 'style' ? '' : node?.children?.map(text).join(' ').trim() ?? ''
     return {
       toggle: find(tree, node => node.type === Switch)?.props,
+      appearance: tree.props['data-mode'],
+      mode: find(tree, node => node.props?.id === 'dsh-safety-mode')?.children.join(''),
       alert: find(tree, node => node.props?.role === 'alert')?.children.join(''),
       status: find(tree, node => node.props?.role === 'status')?.children.join(''),
       heading: find(tree, node => node.type === 'h2')?.children.join(''),
-      rules: find(tree, node => node.type === 'dl'),
+      rules: find(tree, node => node.type === 'dl')?.children.map(row => text(row.children[0])),
       text: text(tree),
     }
   }
@@ -112,22 +118,39 @@ test('registers one localized safety section in global settings', () => {
   assert.equal(page.section.label(), 'Safety Mode')
 })
 
-test('uses the native shield and explains the three features in both languages', () => {
+test('uses the native shield and explains the safety rules in both languages', () => {
   const page = setup()
   assert.equal(page.sectionIcon?.type, page.Shield)
   assert.equal(page.sectionIcon.props.size, 16)
   for (const [locale, heading, labels] of [
-    ['zh', '安全模式', ['三次确认', '风险提示', '不可逆操作']],
-    ['en', 'Safety Mode', ['Three confirmations', 'Risk review', 'Irreversible actions']],
+    ['zh', '安全模式', ['三次确认', '风险提示', '不可逆操作', '凭据保护', '安全措施与跨轮判断']],
+    ['en', 'Safety Mode', ['Three confirmations', 'Risk review', 'Irreversible actions', 'Credential protection', 'Safeguards across turns']],
   ]) {
     page.setLanguage(locale)
     const view = page.render()
     assert.equal(view.heading, heading)
-    assert.deepEqual(Array.from(view.rules.children, row => row.children[0].children.join('')), labels)
+    assert.deepEqual(Array.from(view.rules), labels)
     assert.doesNotMatch(view.text, /遵守程度|depends on the model/i)
     assert.equal(view.status, undefined)
     assert.equal(view.alert, undefined)
   }
+})
+
+test('shows a localized mode only when the setting can be read', () => {
+  const page = setup()
+  assert.equal(page.render().mode, '已关闭')
+  assert.equal(page.render().appearance, 'off')
+  page.setSnapshot({ ...ready, value: { enabled: true }, writable: false })
+  assert.equal(page.render().mode, '已开启')
+  assert.equal(page.render().appearance, 'on')
+  page.setLanguage('en')
+  assert.equal(page.render().mode, 'On')
+  page.setSettingsError('connection lost')
+  assert.equal(page.render().mode, undefined)
+  assert.equal(page.render().appearance, 'unknown')
+  page.setSettingsError(null)
+  page.setSnapshot({ status: 'loading' })
+  assert.equal(page.render().mode, undefined)
 })
 
 test('disables a switch whose value is unknown or whose form is read-only', () => {
@@ -155,11 +178,15 @@ test('waits for the confirmed value and prevents overlapping saves', async () =>
   assert.equal(page.writes[0].value, true)
   assert.equal(page.render().toggle.checked, false)
   assert.equal(page.render().toggle.disabled, true)
+  assert.equal(page.render().mode, '已关闭')
+  assert.equal(page.render().appearance, 'off')
   page.setSnapshot({ ...ready, value: { enabled: true } })
   page.writes[0].pending.resolve(true)
   await saving
   assert.equal(page.render().toggle.checked, true)
   assert.equal(page.render().toggle.disabled, false)
+  assert.equal(page.render().mode, '已开启')
+  assert.equal(page.render().appearance, 'on')
 })
 
 test('keeps the accepted value and explains refusal or transport failure', async () => {
@@ -169,6 +196,7 @@ test('keeps the accepted value and explains refusal or transport failure', async
   await saving
   const refused = page.render()
   assert.equal(refused.toggle.checked, false)
+  assert.equal(refused.appearance, 'off')
   assert.ok(refused.alert)
   saving = page.render().toggle.onChange(true)
   page.writes[1].pending.reject(new Error('offline'))
