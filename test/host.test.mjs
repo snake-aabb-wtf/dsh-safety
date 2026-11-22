@@ -64,8 +64,12 @@ test('the injected policy allows configured credential use while keeping plainte
   const prompt = await render()
   const credentialPolicy = prompt.match(/^### Protect sensitive credentials\n([\s\S]*?)^### /m)?.[1]
   assert.ok(credentialPolicy, 'credential protection must be injected')
-  assert.ok(credentialPolicy.includes('You may run a trusted, configured application or integration'),
-    'permit the application to resolve a saved credential internally')
+  assert.ok(credentialPolicy.includes('ask the user to save the credential manually in a protected file'),
+    'guide the user to configure a file without sharing the value')
+  assert.ok(credentialPolicy.includes('Use PowerShell or another trusted tool to load and use the saved credential internally'),
+    'use an available trusted tool for authorized operations')
+  assert.ok(credentialPolicy.includes('PowerShell can do this in a single invocation'))
+  assert.ok(credentialPolicy.includes('Do not make a separate tool call that returns the credential'))
   assert.ok(credentialPolicy.includes('authentication checks that return only a safe result or status'))
   assert.ok(credentialPolicy.includes('Keep plaintext credentials out of the model-visible context.'))
   assert.ok(credentialPolicy.includes('even if a copy of the exposed credential is already saved'))
