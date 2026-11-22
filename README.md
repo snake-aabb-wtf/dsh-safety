@@ -35,7 +35,7 @@
 在安装包所在目录运行，然后按上面的步骤启用插件和安全模式。
 
 ```powershell
-dsh plugin --profile web add (Resolve-Path './dsh-safety-0.2.1.tgz').Path
+dsh plugin --profile web add (Resolve-Path './dsh-safety-0.2.2.tgz').Path
 ```
 
 </details>
@@ -58,7 +58,7 @@ npm test
 npm pack
 ```
 
-推送与 `package.json` 和 `package-lock.json` 一致的版本标签，例如 `v0.2.1`，即可启动 [Release 工作流](.github/workflows/release.yml)。通过检查和测试后，工作流将 `.tgz` 附到对应的 GitHub Release，并为预发布版本标记预发行版。
+推送与 `package.json` 和 `package-lock.json` 一致的版本标签，例如 `v0.2.2`，即可启动 [Release 工作流](.github/workflows/release.yml)。通过检查和测试后，工作流将 `.tgz` 附到对应的 GitHub Release，并为预发布版本标记预发行版。
 
 ## 许可证
 
